@@ -2,10 +2,11 @@
 
 # 🌐 I18n - Internationalization Library for Spigot/Paper
 
-[![GitHub release](https://img.shields.io/github/v/release/HikenStudio/I18N?style=flat-square)](
+![GitHub release](https://img.shields.io/github/v/release/HikenStudio/I18N?style=flat-square)
 
-[](https://jitpack.io/#HikenStudio/I18N
-)[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT))
+[![](https://jitpack.io/v/HikenStudio/I18N.svg)](https://jitpack.io/#HikenStudio/I18N)
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 
 **I18n** is a lightweight, asynchronous, and modern internationalization library for Spigot/Paper plugins. Built on top of **Adventure**, it provides seamless support for MiniMessage, Legacy colors, and Hex colors within the same message.
 
@@ -41,7 +42,7 @@ repositories {
 
 ```kotlin
 dependencies {
-    implementation("com.github.HikenStudio:I18N-Library:Tag")
+    implementation("com.github.HikenStudio:I18N-Library:1.0.0")
     // Ensure you shade/shadow the library into your plugin jar
 }
 ```
@@ -62,7 +63,7 @@ dependencies {
     }
 
     dependencies {
-        implementation("it.hiken.i18n:i18n-lib:1.0-SNAPSHOT")
+        implementation("it.hiken.i18n:i18n:1.0.0")
     }
     ```
 
