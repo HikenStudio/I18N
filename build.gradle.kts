@@ -1,5 +1,6 @@
 plugins {
     id("java")
+    id("maven-publish")
     id("com.gradleup.shadow") version "9.0.0-beta13"
 }
 
@@ -30,6 +31,21 @@ tasks.shadowJar {
     archiveClassifier.set("")
 }
 
+publishing {
+    publications {
+        create<MavenPublication>("maven") {
+            from(components["java"])
+            versionMapping {
+                usage("java-api") {
+                    fromResolutionOf("runtimeClasspath")
+                }
+                usage("java-runtime") {
+                    fromResolutionResult()
+                }
+            }
+        }
+    }
+}
 tasks.build {
     dependsOn(tasks.shadowJar)
 }
