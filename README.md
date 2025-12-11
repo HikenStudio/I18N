@@ -1,8 +1,11 @@
-Here is a clean, professional, and GitHub-ready **README.md**. It covers installation, usage, configuration, and features, highlighting the hybrid color system.
 
------
 
-# 🌐 I18n Library
+# 🌐 I18n - Internationalization Library for Spigot/Paper
+
+[![GitHub release](https://img.shields.io/github/v/release/HikenStudio/I18N?style=flat-square)](
+
+[](https://jitpack.io/#HikenStudio/I18N
+)[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT))
 
 **I18n** is a lightweight, asynchronous, and modern internationalization library for Spigot/Paper plugins. Built on top of **Adventure**, it provides seamless support for MiniMessage, Legacy colors, and Hex colors within the same message.
 
@@ -16,29 +19,52 @@ Here is a clean, professional, and GitHub-ready **README.md**. It covers install
 
 ## 📦 Installation
 
-### 1\. Build & Publish (Local)
+You can import this library using **JitPack** (recommended) or by building it locally.
 
-First, clone the repository and publish it to your local Maven repository:
+### Method 1: JitPack (Recommended)
 
-```bash
-./gradlew publishToMavenLocal
-```
+1.  **Add the Repository** to your `build.gradle.kts`:
 
-### 2\. Add Dependency
-
-Add the library to your plugin's `build.gradle.kts`.
+<!-- end list -->
 
 ```kotlin
 repositories {
-    mavenLocal() // Important if using local publish
     mavenCentral()
+    maven { url = uri("https://jitpack.io") }
 }
+```
 
+2.  **Add the Dependency**:
+    Replace `Tag` with the latest version (e.g., `v1.0.0`).
+
+<!-- end list -->
+
+```kotlin
 dependencies {
-    implementation("it.hiken.i18n:i18n-lib:1.0-SNAPSHOT")
+    implementation("com.github.HikenStudio:I18N-Library:Tag")
     // Ensure you shade/shadow the library into your plugin jar
 }
 ```
+
+### Method 2: Local Build
+
+1.  Clone the repository and publish to Maven Local:
+
+    ```bash
+    ./gradlew publishToMavenLocal
+    ```
+
+2.  Add `mavenLocal()` to your repositories and depend on the snapshot:
+
+    ```kotlin
+    repositories {
+        mavenLocal()
+    }
+
+    dependencies {
+        implementation("it.hiken.i18n:i18n-lib:1.0-SNAPSHOT")
+    }
+    ```
 
 ## 🚀 Usage
 
@@ -96,7 +122,7 @@ You can switch the active language globally at runtime.
 plugin.getI18n().setActiveLanguage("it");
 ```
 
-## 📂 Configuration & formatting
+## 📂 Configuration & Formatting
 
 The library looks for files in `plugins/YourPlugin/languages/`.
 File names must follow the format: `lang_{code}.yml` (e.g., `lang_en.yml`, `lang_it.yml`).
