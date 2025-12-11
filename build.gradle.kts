@@ -18,15 +18,12 @@ repositories {
 
 dependencies {
     compileOnly("org.spigotmc:spigot-api:1.21.10-R0.1-SNAPSHOT")
-
     implementation("net.kyori:adventure-platform-bukkit:4.4.1")
     implementation("net.kyori:adventure-text-minimessage:4.25.0")
 }
 
 tasks.shadowJar {
     relocate("net.kyori", "it.hiken.i18n.libs.kyori")
-
-
     minimize()
     archiveClassifier.set("")
 }
