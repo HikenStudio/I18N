@@ -1,6 +1,6 @@
 plugins {
     id("java")
-    id("com.github.johnrengelman.shadow") version "8.1.1"
+    id("com.gradleup.shadow") version "9.0.0-beta13"
 }
 
 group = "it.hiken.i18n"
@@ -22,15 +22,11 @@ dependencies {
     implementation("net.kyori:adventure-text-minimessage:4.25.0")
 }
 
-tasks.test {
-    useJUnitPlatform()
-}
-
 tasks.shadowJar {
     relocate("net.kyori", "it.hiken.i18n.libs.kyori")
 
-    minimize()
 
+    minimize()
     archiveClassifier.set("")
 }
 
