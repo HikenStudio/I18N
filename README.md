@@ -42,7 +42,7 @@ repositories {
 
 ```kotlin
 dependencies {
-    implementation("com.github.HikenStudio:I18N-Library:1.0.0")
+    implementation 'com.github.HikenStudio:I18N:1.0.0'
     // Ensure you shade/shadow the library into your plugin jar
 }
 ```
@@ -63,7 +63,7 @@ dependencies {
     }
 
     dependencies {
-        implementation("it.hiken.i18n:i18n:1.0.0")
+        implementation 'com.github.HikenStudio:I18N:1.0.0'
     }
     ```
 
