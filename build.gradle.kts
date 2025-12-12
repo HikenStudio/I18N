@@ -5,7 +5,7 @@ plugins {
 }
 
 group = "it.hiken.i18n"
-version = "1.0-SNAPSHOT"
+version = "1.0.1"
 
 java {
     toolchain.languageVersion.set(JavaLanguageVersion.of(21))

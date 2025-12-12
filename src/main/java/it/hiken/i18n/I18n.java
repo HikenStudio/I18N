@@ -6,16 +6,21 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.CodeSource;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 /**
  * Handles internationalization (i18n) for the plugin.
@@ -54,7 +59,7 @@ public class I18n {
     public I18n(JavaPlugin plugin, String defaultLang) {
         this.plugin = plugin;
         this.defaultLang = defaultLang;
-        this.activeLang = defaultLang; // Ensures activeLang is not null on start
+        this.activeLang = defaultLang;
         this.bukkitAudiences = BukkitAudiences.create(plugin);
         plugin.getLogger().info("[I18n] Initializing I18n with default language: " + defaultLang);
         loadLanguages();
@@ -64,28 +69,44 @@ public class I18n {
         Thread.startVirtualThread(() -> {
             Path langDir = plugin.getDataFolder().toPath().resolve("languages");
             try {
-                if (!Files.exists(langDir)) {
-                    Files.createDirectories(langDir);
-                }
-                String defaultFile = "lang_" + defaultLang + ".yml";
-                Path target = langDir.resolve(defaultFile);
-                if (!Files.exists(target) && plugin.getResource("languages/" + defaultFile) != null) {
-                    plugin.saveResource("languages/" + defaultFile, false);
-                    plugin.getLogger().info("[I18n] Created default language file: " + defaultFile);
-                }
-                try (Stream<Path> paths = Files.walk(langDir, 1)) {
-                    paths.forEach(p -> {
-                        if (p.equals(langDir) || !p.toString().endsWith(".yml")) return;
-                        try {
-                            loadConfig(p);
-                        } catch (Exception ex) {
-                            plugin.getLogger().warning("[I18n] Failed to load language file: " + p.getFileName());
+                CodeSource src = plugin.getClass().getProtectionDomain().getCodeSource();
+                if (src != null) {
+                    try (ZipInputStream zip = new ZipInputStream(src.getLocation().openStream())) {
+                        ZipEntry entry;
+                        while ((entry = zip.getNextEntry()) != null) {
+                            String name = entry.getName();
+                            if (name.startsWith("languages/") && name.endsWith(".yml") && !entry.isDirectory()) {
+                                String fileName = name.replace("languages/", "");
+                                if (fileName.isEmpty()) continue;
+                                Path target = langDir.resolve(fileName);
+                                if (!Files.exists(target)) {
+                                    plugin.saveResource(name, false);
+                                    plugin.getLogger().info("[I18n] Extracted language file: " + fileName);
+                                }
+                            }
                         }
-                    });
+                    }
+                }
+            } catch (IOException e) {
+                plugin.getLogger().warning("[I18n] Could not scan JAR for languages: " + e.getMessage());
+            }
+            try {
+                if (!Files.exists(langDir)) Files.createDirectories(langDir);
+
+                try (Stream<Path> paths = Files.walk(langDir, 1)) {
+                    paths.filter(p -> !p.equals(langDir) && p.toString().endsWith(".yml"))
+                            .forEach(p -> {
+                                try {
+                                    loadConfig(p);
+                                    plugin.getLogger().info("[I18n] Loaded language file: " + p.getFileName());
+                                } catch (Exception ex) {
+                                    plugin.getLogger().warning("[I18n] Failed to load: " + p.getFileName());
+                                }
+                            });
                 }
                 plugin.getLogger().info("[I18n] Loaded " + configs.size() + " languages.");
             } catch (IOException e) {
-                plugin.getLogger().severe("[I18n] Critical error accessing language directory. " + e.getMessage());
+                plugin.getLogger().severe("[I18n] Critical error accessing language directory.");
             }
         });
     }
@@ -109,28 +130,47 @@ public class I18n {
     }
 
     private void loadConfig(Path path) {
+        plugin.getLogger().info("[I18n] Loading configuration from: " + path.getFileName());
         String fileName = path.getFileName().toString();
         String code = fileName.replace("lang_", "").replace(".yml", "");
         configs.put(code, YamlConfiguration.loadConfiguration(path.toFile()));
     }
 
     /**
-     * Sends a localized message to a CommandSender.
+     * Sends a localized, formatted message to the specified {@link CommandSender}.
      * <p>
-     * This method runs on a Virtual Thread to process the message and placeholders,
-     * then schedules the sending on the main Bukkit thread.
+     * This method handles message processing asynchronously using a <b>Virtual Thread</b> to avoid
+     * blocking the main server thread during configuration lookups and string parsing.
+     * The final packet sending is synchronized back to the main Bukkit thread.
      * </p>
      *
-     * @param sender       The recipient of the message.
-     * @param key          The key identifier in the language file.
-     * @param placeholders Key-Value pairs for placeholder replacement (e.g., "{player}", "Steve").
-     * @throws IllegalArgumentException If placeholders are not provided in even pairs.
+     * <h3>Locale Resolution Logic:</h3>
+     * <ol>
+     * <li>If the sender is a {@link Player}, attempts to resolve their client locale (e.g., "en", "it").</li>
+     * <li>If the specific locale is not loaded, falls back to the plugin's default {@code activeLang}.</li>
+     * <li>Finally, defaults to the "en" configuration if the target language file is missing.</li>
+     * </ol>
+     *
+     * @param sender       The recipient of the message (Player or Console).
+     * @param key          The unique configuration key for the message path.
+     * @param placeholders A varargs array of key-value pairs for string replacement.
+     * <br>Format: {@code "placeholder_key", value, "placeholder_key2", value2}.
+     * @throws IllegalArgumentException If the {@code placeholders} array length is not even.
      */
     public void send(CommandSender sender, String key, Object... placeholders) {
-        Thread.startVirtualThread(() -> {
-            if (placeholders.length % 2 != 0) throw new IllegalArgumentException("Placeholders must be in key , value pairs");
+        if (placeholders.length % 2 != 0) throw new IllegalArgumentException("Placeholders must be in key, value pairs");
 
-            YamlConfiguration config = configs.getOrDefault(activeLang, configs.get("en"));
+        Thread.startVirtualThread(() -> {
+            String lang = activeLang;
+
+            if (sender instanceof Player player) {
+                String playerLocale = player.getLocale().split("_")[0].toLowerCase(Locale.ROOT);
+                if (configs.containsKey(playerLocale)) {
+                    lang = playerLocale;
+                }
+            }
+
+            YamlConfiguration config = configs.getOrDefault(lang, configs.get(defaultLang));
             if (config == null) return;
 
             String raw = config.getString(key);
@@ -140,14 +180,10 @@ public class I18n {
             }
 
             for (int i = 0; i < placeholders.length; i += 2) {
-                String placeholderKey = String.valueOf(placeholders[i]);
-                String value = String.valueOf(placeholders[i+1]);
-                raw = raw.replace(placeholderKey, value);
+                raw = raw.replace(String.valueOf(placeholders[i]), String.valueOf(placeholders[i + 1]));
             }
 
-            raw = convertLegacyToMiniMessage(raw);
-            Component finalMessage = miniMessage.deserialize(raw);
-
+            final Component finalMessage = miniMessage.deserialize(convertLegacyToMiniMessage(raw));
             Bukkit.getScheduler().runTask(plugin, () -> bukkitAudiences.sender(sender).sendMessage(finalMessage));
         });
     }
